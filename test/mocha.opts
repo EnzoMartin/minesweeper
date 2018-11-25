@@ -1,0 +1,4 @@
+--require @babel/register
+--require ./test/_setup.test.js
+--full-trace
+--recursive
