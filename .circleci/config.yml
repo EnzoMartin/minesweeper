@@ -1,0 +1,98 @@
+version: 2
+
+defaults: &defaults
+  docker:
+    - image: circleci/node:10
+
+staging-defaults: &staging-defaults
+  <<: *defaults
+  working_directory: ~/staging-repo
+
+prod-defaults: &prod-defaults
+  <<: *defaults
+  working_directory: ~/prod-repo
+
+jobs:
+  build-staging:
+    <<: *staging-defaults
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "package.json" }}
+      - run: npm i
+      - save_cache:
+          paths:
+            - node_modules
+          key: v1-dependencies-{{ checksum "package.json" }}
+      - run: npm run test:ci
+      - run: npm run lint
+      - run:
+          environment:
+            NODE_ENV: "staging"
+          command: npm run build
+      - persist_to_workspace:
+          root: ~/staging-repo
+          paths:
+            - build
+
+  build-prod:
+    <<: *prod-defaults
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "package.json" }}
+      - run: npm i
+      - save_cache:
+          paths:
+            - node_modules
+          key: v1-dependencies-{{ checksum "package.json" }}
+      - run: npm run test:ci
+      - run: npm run lint
+      - run:
+          environment:
+            NODE_ENV: "production"
+          command: npm run build
+      - persist_to_workspace:
+          root: ~/prod-repo
+          paths:
+            - build
+
+  deploy-staging:
+    <<: *staging-defaults
+    steps:
+      - attach_workspace:
+          at: ~/staging-repo
+
+  deploy-prod:
+    <<: *prod-defaults
+    steps:
+      - attach_workspace:
+          at: ~/prod-repo
+
+workflows:
+  version: 2
+  build-deploy:
+    jobs:
+      - build-staging:
+          filters:
+            branches:
+              ignore: master
+      - build-prod:
+          filters:
+            branches:
+              only: master
+      - deploy-staging:
+          requires:
+            - build-staging
+          filters:
+            branches:
+              ignore: master
+      - deploy-prod:
+          requires:
+            - build-prod
+          filters:
+            branches:
+              only: master
+
