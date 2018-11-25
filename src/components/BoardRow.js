@@ -9,7 +9,7 @@ class BoardRow extends Component {
     return (
       <tr>
         {this.props.item.map((item) => {
-          return <Square key={item.id} item={item} />;
+          return <Square key={item.id} item={item} remainingFlags={this.props.remainingFlags} />;
         })}
       </tr>
     );

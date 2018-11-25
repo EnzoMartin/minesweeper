@@ -2,6 +2,9 @@ import React, {Component} from 'react';
 import {inject, observer} from 'mobx-react';
 import {Link} from 'react-router-dom';
 
+import {faGithub} from '@fortawesome/free-brands-svg-icons';
+import {FontAwesomeIcon as Icon} from '@fortawesome/react-fontawesome';
+
 import {
   Nav,
   Collapse,
@@ -44,10 +47,11 @@ class Navigation extends Component {
           <Nav className='ml-auto' navbar>
             <NavItem>
               <NavLink
-                tag={Link}
-                to={ROUTES.home}
+                target='_blank'
+                href='https://github.com/EnzoMartin/minesweeper'
               >
-                {'Board'}
+                {'GitHub '}
+                <Icon icon={faGithub} />
               </NavLink>
             </NavItem>
           </Nav>

@@ -1,22 +1,81 @@
+#pause-overlay {
+  top: 0;
+  left: 0;
+  right: -1px;
+  bottom: -1px;
+  background: #7f7f7f;
+
+  th {
+    border: none;
+    text-align: center;
+    vertical-align: middle;
+  }
+}
+
+#board-header {
+  min-height: 56px;
+}
+
 .board {
   width: auto;
   margin: 0 auto;
 
   .square {
-    border: 1px solid;
+    border: 1px solid #000;
     text-align: center;
     vertical-align: middle;
     padding: 0;
+    font-weight: bold;
 
-    button {
+    button, div {
       width: 50px;
       height: 50px;
+    }
+
+    div {
+      display: table-cell;
+      vertical-align: middle;
+    }
+
+    button {
       cursor: pointer;
       border: none;
     }
 
+    &.bombs-1 {
+      color: #0000ff;
+    }
+
+    &.bombs-2 {
+      color: #008100;
+    }
+
+    &.bombs-3 {
+      color: #ff1300;
+    }
+
+    &.bombs-4 {
+      color: #000083;
+    }
+
+    &.bombs-5 {
+      color: #810500;
+    }
+
+    &.bombs-6 {
+      color: #2a9494;
+    }
+
+    &.bombs-7 {
+      color: #000000;
+    }
+
     &.bomb {
-      background: lightcoral;
+      color: #000;
+
+      button, div {
+        background: lightcoral;
+      }
     }
   }
 }

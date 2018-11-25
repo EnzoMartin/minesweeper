@@ -31,10 +31,12 @@ class Square {
       },
       (shouldReveal, reaction) => {
         if (shouldReveal) {
+          this.isFlag = false;
           this.isRevealed = true;
           reaction.dispose();
         }
-      }
+      },
+      {delay: 75}
     );
   }
 
@@ -77,6 +79,7 @@ class Square {
   @action reveal() {
     if (!this.isFlag) {
       this.isRevealed = true;
+      this.reactionDisposer();
     }
   }
 
