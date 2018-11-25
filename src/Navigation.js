@@ -25,8 +25,9 @@ class Navigation extends Component {
   }
 
   toggle() {
-    const isOpen = !this.state.isOpen;
-    this.setState({isOpen});
+    this.setState((prevState) => {
+      return {isOpen: !prevState.isOpen};
+    });
   }
 
   render() {
