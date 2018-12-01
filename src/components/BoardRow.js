@@ -1,5 +1,6 @@
 import React, {Component} from 'react';
 import {observer} from 'mobx-react';
+import PropTypes from 'prop-types';
 
 import Square from './Square';
 
@@ -15,5 +16,11 @@ class BoardRow extends Component {
     );
   }
 }
+
+BoardRow.propTypes = {
+  remainingFlags: PropTypes.number,
+  item: PropTypes.array,
+  isOver: PropTypes.bool,
+};
 
 export default BoardRow;

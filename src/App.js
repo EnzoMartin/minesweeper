@@ -6,7 +6,7 @@ import BoardStore from './stores/BoardStore';
 
 import DefaultLayout from './layouts/DefaultLayout';
 
-import './App.scss';
+import './scss/style.scss';
 
 const stores = {boardStore: new BoardStore()};
 

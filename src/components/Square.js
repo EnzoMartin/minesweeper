@@ -1,4 +1,5 @@
 import React, {Component, Fragment} from 'react';
+import PropTypes from 'prop-types';
 import {FontAwesomeIcon as Icon} from '@fortawesome/react-fontawesome';
 import {observer} from 'mobx-react';
 import classnames from 'classnames';
@@ -55,5 +56,11 @@ class Square extends Component {
     );
   }
 }
+
+Square.propTypes = {
+  remainingFlags: PropTypes.number,
+  item: PropTypes.object,
+  isOver: PropTypes.bool,
+};
 
 export default Square;

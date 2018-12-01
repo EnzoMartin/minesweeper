@@ -11,7 +11,12 @@ class Square {
   /**
    * Create a new Square
    * @param {Object} data
-   * @param {Map} others
+   * @param {Number|String} data.x
+   * @param {Number|String} data.y
+   * @param {Boolean} [data.isBomb]
+   * @param {Boolean} [data.isRevealed]
+   * @param {Boolean} [data.isFlag]
+   * @param {Map<Square>} others
    */
   constructor(data = {}, others) {
     this.others = others;
@@ -23,6 +28,7 @@ class Square {
     this.isRevealed = data.isRevealed || this.isRevealed;
     this.isFlag = data.isFlag || this.isFlag;
 
+    // Listens to neighbors to determine whether to reveal itself if an empty neighbor square is clicked or revealed
     this.reactionDisposer = reaction(
       () => {
         let shouldReveal = false;
@@ -45,44 +51,17 @@ class Square {
   }
 
   /**
-   * Calculate the square's neighbors and bombs
+   * Returns whether the square should be saved in the save game object
+   * @returns {Boolean}
    */
-  @action calculateNeighbors() {
-    if (!this.isBomb) {
-      let adjacentBombs = 0;
-      let yStart = this.y - 1;
-
-      const yStop = this.y + 1;
-      const xStop = this.x + 1;
-
-      while (yStart <= yStop) {
-        let xStart = this.x - 1;
-        while (xStart <= xStop) {
-          const neighborKey = `${yStart}-${xStart}`;
-          const neighbor = this.others.get(neighborKey);
-
-          if (neighbor) {
-            this.neighbors.set(neighborKey, neighbor);
-
-            if (neighbor.isBomb) {
-              adjacentBombs++;
-            }
-          }
-
-          xStart++;
-        }
-
-        yStart++;
-      }
-
-      this.adjacentBombs = adjacentBombs;
-    }
-  }
-
   @computed get shouldSave() {
     return this.isFlag || this.isBomb || this.isRevealed;
   }
 
+  /**
+   * Return a reduced JSON object
+   * @returns {{id: String, isRevealed: Boolean, isBomb: Boolean, isFlag: Boolean}}
+   */
   @computed get toJSON() {
     return {
       id: this.id,
@@ -118,6 +97,41 @@ class Square {
       this.isFlag = !this.isFlag;
     }
   }
+
+  /**
+   * Calculate the square's neighbors and bombs unless the square is a bomb
+   */
+  @action calculateNeighbors() {
+    if (!this.isBomb) {
+      let adjacentBombs = 0;
+      let yStart = this.y - 1;
+
+      const yStop = this.y + 1;
+      const xStop = this.x + 1;
+
+      while (yStart <= yStop) {
+        let xStart = this.x - 1;
+        while (xStart <= xStop) {
+          const neighborKey = `${yStart}-${xStart}`;
+          const neighbor = this.others.get(neighborKey);
+
+          if (neighbor) {
+            this.neighbors.set(neighborKey, neighbor);
+
+            if (neighbor.isBomb) {
+              adjacentBombs++;
+            }
+          }
+
+          xStart++;
+        }
+
+        yStart++;
+      }
+
+      this.adjacentBombs = adjacentBombs;
+    }
+  }
 }
 
 class Row {
@@ -126,6 +140,8 @@ class Row {
   /**
    * Create a new Row
    * @param {Object} data
+   * @param {Array<Square>} data.squares
+   * @param {Number} data.y
    */
   constructor(data = {}) {
     this.id = uuidV4();

@@ -1,12 +1,14 @@
 import {action, computed, observable, reaction} from 'mobx';
+
 import {
   Square,
   Score,
   Row,
 } from './Models';
+import {STORAGE} from '../constants';
 
 class BoardStore {
-  minesPerSquares = 7.5;
+  bombsPerSquares = 7.5;
 
   // Board data
   @observable squares = new Map();
@@ -29,13 +31,15 @@ class BoardStore {
    * Create Board store
    */
   constructor() {
-    const previousGame = localStorage.getItem('game');
+    const previousGame = localStorage.getItem(STORAGE.game);
 
     if (typeof previousGame === 'string') {
       try {
-        const previousGame = JSON.parse(localStorage.getItem('game'));
-        this.timer = parseInt(localStorage.getItem('timer') || 0, 10);
+        // Load the saved game
+        const previousGame = JSON.parse(localStorage.getItem(STORAGE.game));
+        this.timer = parseInt(localStorage.getItem(STORAGE.timer) || 0, 10);
 
+        // Build Map of Squares in format used throughout the store
         const squares = new Map();
         previousGame.squares.forEach((item) => {
           const coordinates = item.id.split('-');
@@ -47,7 +51,7 @@ class BoardStore {
 
         this.generateExistingBoard(previousGame.width, previousGame.height, previousGame.clicks, squares);
       } catch (err) {
-        // No previous valid save game
+        // No previous valid save game, start a new game
         console.error('Failed to load save game', err);
         this.generateBoard();
       }
@@ -57,7 +61,8 @@ class BoardStore {
 
 
     try {
-      const scores = JSON.parse(localStorage.getItem('scores') || '[]');
+      // Restore the high scores list to the store
+      const scores = JSON.parse(localStorage.getItem(STORAGE.scores) || '[]');
       this.highScores = scores.map((item) => {
         return new Score(item);
       });
@@ -66,6 +71,7 @@ class BoardStore {
       console.error('Failed to get high scores', err);
     }
 
+    // Reaction checking for the game ending to trigger deleting the save game and saving the player score
     reaction(
       () => {
         return this.gameOver;
@@ -73,14 +79,14 @@ class BoardStore {
       (gameOver) => {
         if (gameOver) {
           this.isPaused = true;
-          localStorage.removeItem('game');
+          localStorage.removeItem(STORAGE.game);
           console.log('Finished! Score:', this.score);
 
           this.highScores.push(new Score({
-            flagsPlaced: this.flags,
+            flagsPlaced: this.flagsPlacedCount,
             clicks: this.clicks,
             timer: this.timer,
-            revealedBombs: this.revealedBombs,
+            revealedBombs: this.revealedBombsCount,
             width: this.width,
             height: this.height,
           }));
@@ -88,15 +94,17 @@ class BoardStore {
       }
     );
 
+    // Reaction to save the high scores when a new score is added
     reaction(
       () => {
         return this.highScores.length;
       },
       () => {
-        localStorage.setItem('scores', JSON.stringify(this.highScores));
+        localStorage.setItem(STORAGE.scores, JSON.stringify(this.highScores));
       }
     );
 
+    // Reaction checking for whether to start or stop the timer
     reaction(
       () => {
         return this.isPaused;
@@ -110,9 +118,10 @@ class BoardStore {
       }
     );
 
+    // Reaction to check whether the player has revealed all necessary squares to win
     reaction(
       () => {
-        return this.squaresTriggered === this.squares.size;
+        return (this.squaresRevealedCount + this.totalBombsCount) === this.squares.size;
       },
       (isOver) => {
         if (isOver) {
@@ -122,9 +131,10 @@ class BoardStore {
       {delay: 100}
     );
 
+    // Reaction for auto-saving the game state to the save game "file"
     reaction(
       () => {
-        return this.revealed + this.clicks;
+        return this.squaresRevealedCount + this.clicks;
       },
       (count) => {
         if (count) {
@@ -133,9 +143,10 @@ class BoardStore {
       }
     );
 
+    // Reaction to end the game if player hits too many bombs
     reaction(
       () => {
-        return Math.round(this.revealedBombs / this.totalBombs * 100);
+        return Math.round(this.revealedBombsCount / this.totalBombsCount * 100);
       },
       (percentage) => {
         if (percentage >= 35) {
@@ -146,6 +157,10 @@ class BoardStore {
     );
   }
 
+  /**
+   * Get the timer elapse time array in the format of [minutes, seconds, milliseconds]
+   * @returns {Array<Number>}
+   */
   @computed get timeElapsed() {
     let minutes = Math.floor(this.timer / 60000);
     let seconds = ((this.timer % 60000) / 1000).toFixed(0);
@@ -158,55 +173,75 @@ class BoardStore {
     return [minutes, seconds, milliseconds];
   }
 
-  @computed get squaresTriggered() {
-    let count = 0;
-
-    this.squares.forEach((item) => {
-      if (item.isRevealed || item.isBomb) {
-        count++;
-      }
-    });
-
-    return count;
-  }
-
+  /**
+   * Get the "3BV" score of the player
+   * @returns {Number}
+   */
   @computed get score() {
     return this.clicks > this.minimumClicks ? this.minimumClicks + (this.minimumClicks - this.clicks) : this.minimumClicks;
   }
 
-  @computed get totalSquares() {
-    return this.height * this.width;
-  }
-
-  @computed get totalBombs() {
-    return Math.ceil(this.totalSquares / this.minesPerSquares);
-  }
-
-  @computed get revealedBombs() {
-    let count = 0;
-
-    this.bombs.forEach((item) => {
-      if (item.isRevealed) {
-        count++;
-      }
-    });
-
-    return count;
-  }
-
+  /**
+   * Get whether the game has started and is on-going
+   * @returns {Boolean}
+   */
   @computed get hasStarted() {
     return this.timer > 0 && !this.gameOver;
   }
 
-  @computed get remainingBombs() {
-    return this.totalBombs - this.revealedBombs;
+  /**
+   * Get the total amount of squares on the board
+   * @returns {number}
+   */
+  @computed get totalSquaresCount() {
+    return this.height * this.width;
   }
 
-  @computed get remainingFlags() {
-    return this.totalBombs - this.flags;
+  /**
+   * Get the total amount of bombs on the board
+   * @returns {Number}
+   */
+  @computed get totalBombsCount() {
+    return Math.ceil(this.totalSquaresCount / this.bombsPerSquares);
   }
 
-  @computed get revealed() {
+  /**
+   * Get the count of bombs revealed
+   * @returns {Number}
+   */
+  @computed get revealedBombsCount() {
+    let count = 0;
+
+    this.bombs.forEach((item) => {
+      if (item.isRevealed) {
+        count++;
+      }
+    });
+
+    return count;
+  }
+
+  /**
+   * Get the count of remaining unrevealed bombs
+   * @returns {Number}
+   */
+  @computed get remainingBombsCount() {
+    return this.totalBombsCount - this.revealedBombsCount;
+  }
+
+  /**
+   * Get the count of remaining flags that can be placed
+   * @returns {Number}
+   */
+  @computed get remainingFlagsCount() {
+    return this.totalBombsCount - this.flagsPlacedCount;
+  }
+
+  /**
+   * Get the count of squares revealed
+   * @returns {Number}
+   */
+  @computed get squaresRevealedCount() {
     let count = 0;
 
     this.squares.forEach((item) => {
@@ -218,7 +253,11 @@ class BoardStore {
     return count;
   }
 
-  @computed get bombsFlagged() {
+  /**
+   * Get the count of bombs flagged
+   * @returns {Number}
+   */
+  @computed get bombsFlaggedCount() {
     let count = 0;
     this.bombs.forEach((item) => {
       if (item.isFlag) {
@@ -229,7 +268,11 @@ class BoardStore {
     return count;
   }
 
-  @computed get flags() {
+  /**
+   * Get the count of flags placed
+   * @returns {Number}
+   */
+  @computed get flagsPlacedCount() {
     let count = 0;
     this.squares.forEach((item) => {
       if (item.isFlag) {
@@ -240,6 +283,10 @@ class BoardStore {
     return count;
   }
 
+  /**
+   * Returns the current board status with just the squares that should be saved
+   * @returns {{width: Number, height: Number, clicks: Number, squares: Array<Object>}}
+   */
   @computed get getSaveState() {
     const squares = [];
 
@@ -259,21 +306,33 @@ class BoardStore {
     };
   }
 
+  /**
+   * Persist the current game state to a save "file"
+   */
   saveToLocalStorage = () => {
-    localStorage.setItem('game', JSON.stringify(this.getSaveState));
+    localStorage.setItem(STORAGE.game, JSON.stringify(this.getSaveState));
   };
 
+  /**
+   * Reset the timer
+   */
   @action resetTimer() {
     this.timer = 0;
   }
 
+  /**
+   * Start the timer interval
+   */
   @action startTimer() {
     this.timerInterval = setInterval(() => {
       this.timer += 10;
-      localStorage.setItem('timer', this.timer);
+      localStorage.setItem(STORAGE.timer, this.timer);
     }, 10);
   }
 
+  /**
+   * Stop and clear the timer interval
+   */
   @action stopTimer() {
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
@@ -282,11 +341,26 @@ class BoardStore {
   }
 
   /**
-   * Generate a board from the provided squares map
+   * Toggle the pause state
+   * @param isPaused
+   */
+  @action togglePause(isPaused) {
+    this.isPaused = isPaused;
+  }
+
+  /**
+   * Increment the player click count
+   */
+  @action incrementClicks() {
+    this.clicks++;
+  }
+
+  /**
+   * Generate a board from the provided squares map from a save game
    * @param {Number} width
    * @param {Number} height
    * @param {Number} clicks
-   * @param {Map} previousSquares
+   * @param {Map<Square>} previousSquares
    */
   @action generateExistingBoard(width, height, clicks, previousSquares) {
     this.width = width;
@@ -328,16 +402,19 @@ class BoardStore {
     this.countMinimumClicks();
   }
 
+  /**
+   * Reset the player properties for a new game and deletes any saved game
+   */
   @action resetPlayer() {
     this.resetTimer();
     this.isPaused = true;
     this.gameOver = false;
     this.clicks = 0;
-    localStorage.removeItem('game');
+    localStorage.removeItem(STORAGE.game);
   }
 
   /**
-   * Generate a new board
+   * Generate a new board with the default or provided dimensions
    * @param {Number} [width]
    * @param {Number} [height]
    */
@@ -369,9 +446,10 @@ class BoardStore {
       y++;
     }
 
+    // Waits for first click before adding bombs to ensure player never clicks a bomb on first click
     this.firstClickDispose = reaction(
       () => {
-        return this.revealed;
+        return this.squaresRevealedCount;
       },
       (squares, reaction) => {
         reaction.dispose();
@@ -386,8 +464,11 @@ class BoardStore {
     this.rows.replace(rows);
   }
 
+  /**
+   * Generates the bombs to place on the board
+   */
   @action generateBomb() {
-    let bombsRemaining = this.totalBombs;
+    let bombsRemaining = this.totalBombsCount;
     const bombs = new Map();
     const keys = Array.from(this.squares.keys());
 

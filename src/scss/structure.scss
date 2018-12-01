@@ -16,7 +16,7 @@
   min-height: 56px;
 }
 
-.board {
+#board {
   width: auto;
   margin: 0 auto;
 
@@ -26,10 +26,6 @@
     vertical-align: middle;
     padding: 0;
     font-weight: bold;
-
-    &:not(.revealed):hover button {
-      background-color: #fff;
-    }
 
     button, div {
       width: 50px;
@@ -85,11 +81,16 @@
     }
   }
 
+  &:not(.game-over) {
+    .square:not(.revealed):hover button {
+      background-color: #fff;
+    }
+  }
+
   &.game-over {
-    .square {
-      button {
-        cursor: auto;
-      }
+    .square button {
+      cursor: auto;
+      outline: none;
     }
   }
 }

@@ -36,16 +36,16 @@ class Board extends Component {
   }
 
   handlePause = () => {
-    this.props.boardStore.isPaused = true;
+    this.props.boardStore.togglePause(true);
   };
 
   handleResume = () => {
-    this.props.boardStore.isPaused = false;
+    this.props.boardStore.togglePause(false);
   };
 
   handleClick = () => {
     if (!this.props.boardStore.gameOver) {
-      this.props.boardStore.clicks++;
+      this.props.boardStore.incrementClicks();
     }
   };
 
@@ -61,11 +61,11 @@ class Board extends Component {
   render() {
     const {
       width,
-      totalBombs,
-      remainingBombs,
-      remainingFlags,
+      totalBombsCount,
+      remainingBombsCount,
+      remainingFlagsCount,
       gameOver,
-      flags,
+      flagsPlacedCount,
       timeElapsed,
       isPaused,
       hasStarted,
@@ -136,17 +136,17 @@ class Board extends Component {
                     <div className='float-right'>
                       {`${this.props.boardStore.clicks} Clicks | `}
                       <Icon icon={faBomb} />
-                      {` ${remainingBombs} | `}
-                      <span className={remainingFlags < 1 ? 'text-danger' : null}>
+                      {` ${remainingBombsCount} | `}
+                      <span className={remainingFlagsCount < 1 ? 'text-danger' : null}>
                         <Icon icon={faFlag} />
-                        {` ${flags}/${totalBombs}`}
+                        {` ${flagsPlacedCount}/${totalBombsCount}`}
                       </span>
                     </div>
                   </Col>
                 </Row>
               </CardHeader>
               <CardBody>
-                <Table className={classnames('board position-relative', {'game-over': gameOver})}>
+                <Table id='board' className={classnames('position-relative', {'game-over': gameOver})}>
                   <thead>
                     <tr className={classnames({'d-none': !isPaused || !hasStarted})}>
                       <th id='pause-overlay' className='position-absolute' colSpan={width} onClick={this.handleResume}>
@@ -161,7 +161,7 @@ class Board extends Component {
                   </thead>
                   <tbody onClick={this.handleClick}>
                     {rows.map((item) => {
-                      return <BoardRow key={item.id} item={item.squares} isOver={gameOver} remainingFlags={remainingFlags} />;
+                      return <BoardRow key={item.id} item={item.squares} isOver={gameOver} remainingFlags={remainingFlagsCount} />;
                     })}
                   </tbody>
                 </Table>
