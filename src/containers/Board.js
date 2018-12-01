@@ -43,6 +43,12 @@ class Board extends Component {
     this.props.boardStore.isPaused = false;
   };
 
+  handleClick = () => {
+    if (!this.props.boardStore.gameOver) {
+      this.props.boardStore.clicks++;
+    }
+  };
+
   handleSubmit = (event) => {
     event.preventDefault();
     this.props.boardStore.generateBoard(this.state.size, this.state.size);
@@ -58,6 +64,7 @@ class Board extends Component {
       totalBombs,
       remainingBombs,
       remainingFlags,
+      gameOver,
       flags,
       timeElapsed,
       isPaused,
@@ -120,13 +127,14 @@ class Board extends Component {
                     {'Board'}
                   </Col>
                   <Col className={classnames('text-center', {'d-none': !hasStarted})}>
-                    <Button onClick={this.handlePause} size='sm'>
+                    <Button onClick={this.handlePause} disabled={isPaused} size='sm'>
                       <Icon icon={faPauseCircle} />
                       {' Pause'}
                     </Button>
                   </Col>
                   <Col>
                     <div className='float-right'>
+                      {`${this.props.boardStore.clicks} Clicks | `}
                       <Icon icon={faBomb} />
                       {` ${remainingBombs} | `}
                       <span className={remainingFlags < 1 ? 'text-danger' : null}>
@@ -138,7 +146,7 @@ class Board extends Component {
                 </Row>
               </CardHeader>
               <CardBody>
-                <Table className='board position-relative'>
+                <Table className={classnames('board position-relative', {'game-over': gameOver})}>
                   <thead>
                     <tr className={classnames({'d-none': !isPaused || !hasStarted})}>
                       <th id='pause-overlay' className='position-absolute' colSpan={width} onClick={this.handleResume}>
@@ -151,9 +159,9 @@ class Board extends Component {
                       </th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody onClick={this.handleClick}>
                     {rows.map((item) => {
-                      return <BoardRow key={item.id} item={item.squares} remainingFlags={remainingFlags} />;
+                      return <BoardRow key={item.id} item={item.squares} isOver={gameOver} remainingFlags={remainingFlags} />;
                     })}
                   </tbody>
                 </Table>

@@ -9,38 +9,46 @@ import {faBomb, faFlag} from '@fortawesome/free-solid-svg-icons';
 class Square extends Component {
   handleReveal = (event) => {
     event.preventDefault();
-    this.props.item.reveal();
+    if (!this.props.isOver) {
+      this.props.item.reveal();
+    }
   };
 
   handleFlag = (event) => {
     event.preventDefault();
-    if (this.props.remainingFlags > 0 || this.props.item.isFlag) {
+    if (!this.props.isOver && (this.props.remainingFlags > 0 || this.props.item.isFlag)) {
       this.props.item.toggleFlag();
     }
   };
 
   render() {
     const {item} = this.props;
+    const {
+      isBomb,
+      isFlag,
+      isRevealed,
+      adjacentBombs,
+    } = item;
+
     const classes = classnames('square', {
-      flag: item.isFlag,
-      bomb: item.isBomb, // TODO: Remove when done testing
-      revealed: item.isRevealed,
-      [`bombs-${item.adjacentBombs}`]: item.isRevealed,
+      flag: isFlag,
+      revealed: isRevealed,
+      [`bombs-${adjacentBombs}`]: isRevealed,
     });
 
     return (
-      <td className={classes}>
-        {item.isRevealed ? (
+      <td className={classes} onClick={this.handleReveal} onContextMenu={this.handleFlag}>
+        {isRevealed ? (
           <div>
-            {item.isBomb ? <Icon icon={faBomb} /> : (
+            {isBomb ? <Icon icon={faBomb} /> : (
               <Fragment>
-                {item.adjacentBombs ? item.adjacentBombs : null}
+                {adjacentBombs ? adjacentBombs : null}
               </Fragment>
             )}
           </div>
         ) : (
-          <button type='button' onClick={this.handleReveal} onContextMenu={this.handleFlag}>
-            {item.isFlag ? <Icon icon={faFlag} /> : '?'}
+          <button type='button'>
+            {isFlag ? <Icon icon={faFlag} /> : null}
           </button>
         )}
       </td>
